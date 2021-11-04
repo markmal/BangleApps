@@ -4184,5 +4184,21 @@
       { "name": "qalarm.wid.js", "url": "widget.js" }
     ],
     "data": [{ "name": "qalarm.json" }]
-  }
+  },
+
+{ "id": "wsspeed",
+  "name": "Windsurfing Speedometer",
+  "shortName":"WS Speed",
+  "version":"0.01",
+  "description": "Shows current speed, max average speeds: for 2 sec, for 100m. Logs raw NMEA output. Exports it as GPX.",
+  "icon": "wsspeed-64.png",
+  "tags": "GPS speed logger",
+  "supports" : ["BANGLEJS2"],
+  "readme": "README.md",
+  "storage": [
+    {"name":"wsspeed.app.js","url":"wsspeed.app.js"},
+    {"name":"wsspeed.img","url":"wsspeed.img.js","evaluate":true}
+  ]
+}
+
 ]
