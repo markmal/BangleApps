@@ -7,6 +7,7 @@
   "tags": "GPS speed logger",
   "supports" : ["BANGLEJS2"],
   "readme": "README.md",
+  "allow_emulator": true,  
   "storage": [
     {"name":"wsspeed.app.js","url":"wsspeed.app.js"},
     {"name":"wsspeed.img","url":"wsspeed.img.js","evaluate":true}
