@@ -6,16 +6,15 @@ It incapsulates Bangle.GPS
 See usage examples at the bottom 
 */
 
-
-function AT6558(id){
+AT6558 = function(id){
   this.id = id;
   this.acturer = "";
   this.IC = "";
   this.SW = "";
   this.build_time = "";
   this.mode = "";
-  AT6558.prototype.serialBaudRate = 9600; 
-  AT6558.prototype.baudRate = 9600;  
+  AT6558.prototype.serialBaudRate = 9600;
+  AT6558.prototype.baudRate = 9600;
   this.updateRate = NaN;
   this.needsValidation = false;
   this.ActiveSats=[];
@@ -646,8 +645,9 @@ AT6558.prototype.restart = function(n) {
   this.sendCommand("CAS10,"+n.toFixed(0));
 };
 
-exports = AT6558;
-
+exports.connect = function(id) {
+    return new AT6558(id);
+};
 
 
 // ========= TEST and Examples ================= //
