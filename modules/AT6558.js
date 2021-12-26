@@ -1,7 +1,6 @@
 /* Copyright (c) 2021 Mark Malakanov. See the file LICENSE for copying permission. */
 /*
 AT6558
-v 1.0.1.128
 Provides functions, controls, settings for AT6558 based GNSS module.
 It incapsulates Bangle.GPS
 See usage examples at the bottom 
@@ -15,7 +14,8 @@ function AT6558(id){
   this.SW = "";
   this.build_time = "";
   this.mode = "";
-  this.baudRate = NaN;
+  AT6558.prototype.serialBaudRate = 9600; 
+  AT6558.prototype.baudRate = 9600;  
   this.updateRate = NaN;
   this.needsValidation = false;
   this.ActiveSats=[];
@@ -26,6 +26,9 @@ function AT6558(id){
   this.distSpdSOG = NaN;
   this.distLocTime = new Date();
   this.isStartUp = false;
+  this.sensitivitySpd = 0.1; // kph
+  this.sensitivityLoc = 0.00001; // dgr
+  this.sensitivityCrs = 1.0; // dgr 
 }
 
 // misc functions
@@ -249,7 +252,8 @@ AT6558.prototype.hndlGLL = function(sntc) {
 
   this.addDistLoc(prev);
   if(this.cbChngLoc && !isNaN(prev.lat) && !isNaN(this.lat) 
-     && (prev.lat != this.lat || prev.lon != this.lon)){
+     && (Math.abs(prev.lat - this.lat) >= this.sensitivityLoc 
+      || Math.abs(prev.lon - this.lon) >= this.sensitivityLoc)){
     this.cbChngLoc({lat:this.lat, lon:this.lon});
   }
 
@@ -358,7 +362,8 @@ AT6558.prototype.onRMC = function(callback){
 
 AT6558.prototype.hndlRMC = function(sntc) {
   //print("RMC "+sntc);
-  var prev = {lat:this.lat, lon:this.lon, SOG_km:this.SOG_km, COG:this.COG, 
+  var prev = {lat:this.lat, lon:this.lon, 
+              SOG_km:this.SOG_km, COG:this.COG, 
               datetime:this.datetime};
   var d = sntc.split(",");
   if(d[1]&&d[9]) this.datetime = this.nmeaDTtoDateTime(d[9],d[1]);
@@ -376,16 +381,19 @@ AT6558.prototype.hndlRMC = function(sntc) {
 
   this.addDistLoc(prev);
   if(this.cbChngLoc && !isNaN(prev.lat) && !isNaN(this.lat) 
-     && (prev.lat != this.lat || prev.lon != this.lon)){
+     && (Math.abs(prev.lat - this.lat) >= this.sensitivityLoc 
+      || Math.abs(prev.lon - this.lon) >= this.sensitivityLoc)){
     this.cbChngLoc({lat:this.lat, lon:this.lon});
   }
 
   this.addDistSpd();
-  if(this.cbChngSpd && !isNaN(this.SOG_km) && prev.SOG_km != this.SOG_km){
+  if(this.cbChngSpd && !isNaN(this.SOG_km) 
+    && Math.abs(prev.SOG_km - this.SOG_km) >= this.sensitivitySpd ){
     this.cbChngSpd(this.SOG_km);
   }
 
-  if(this.cbChngCrs && !isNaN(this.COG) && prev.COG != this.COG)
+  if(this.cbChngCrs && !isNaN(this.COG) 
+    && Math.abs(prev.COG - this.COG) >= this.sensitivityCrs )
     this.cbChngCrs(this.COG);
 
   if(this.cbRMC) this.cbRMC({
@@ -411,17 +419,22 @@ AT6558.prototype.onVTG = function(callback){
 
 AT6558.prototype.hndlVTG = function(sntc) {
   //print("VTG "+sntc);
+  var prev = {SOG_km:this.SOG_km, COG:this.COG};
   var d = sntc.split(",");
-  this.COGT = parseFloat(d[1]);
+  this.COG = parseFloat(d[1]);
   this.COGM = parseFloat(d[3]);
   this.SOG_kn = parseFloat(d[5]);
   this.SOG_km = parseFloat(d[7]);
   this.mode = d[9];
 
   this.addDistSpd();
-  if(this.cbChngSpd && !isNaN(this.SOG_km) && prev.SOG_km != this.SOG_km){
+  if(this.cbChngSpd && !isNaN(this.SOG_km) 
+    && Math.abs(prev.SOG_km - this.SOG_km) >= this.sensitivitySpd ){
     this.cbChngSpd(this.SOG_km);
   }
+  if(this.cbChngCrs && !isNaN(this.COG) 
+    && Math.abs(prev.COG - this.COG) >= this.sensitivityCrs )
+    this.cbChngCrs(this.COG);
 
   if(!isNaN(this.SOG_kn) && this.cbVTG) this.cbVTG({
     sys: this.sys,
@@ -458,7 +471,7 @@ AT6558.prototype.hndlZDA = function(sntc) {
 
 
 // On Start Up. First message after Power On
-AT6558.prototype.onStartUp = function(callback){
+AT6558.prototype.onStartup = function(callback){
   this.cbStartUp = callback;
 };
 
@@ -517,6 +530,7 @@ AT6558.prototype.powerOn = function() {
 };
 
 AT6558.prototype.powerOff = function() {
+  //Serial1.removeListener('data',gpsdata);
   Bangle.on("GPS-raw", function(){});
   Bangle.setGPSPower(0, this.id);
 };
@@ -530,55 +544,42 @@ AT6558.prototype.saveConfiguration = function() {
 };
 
 // Set the baud rate of serial communication
-AT6558.prototype.setBaudRate = function(v) {
-  var br = "";
-  switch (v) {
-    case 4800:
-      br = "0";
-      break;
-    case 9600:
-      br = "1";
-      break;
-    case 19200:
-      br = "2";
-      break;
-    case 38400:
-      br = "3";
-      break;
-    case 57600:
-      br = "4";
-      break;
-    case 115200:
-      br = "5";
-      break;
-    default:
-      return;
+function setSerial1BaudRate(){
+  //print("set Serial1 BaudRate", baudRate);
+  Serial1.setup(baudRate,{rx:D30, tx:D31});
+  this.serialBaudRate = baudRate;
+}
+
+function setBaudRate(br){
+  if(this.serialBaudRate == this.baudRate){
+    var brn = "";
+    switch (br) {
+      case 4800:  brn = "0"; break;
+      case 9600:  brn = "1"; break;
+      case 19200: brn = "2"; break;
+      case 38400: brn = "3"; break;
+      case 57600: brn = "4"; break;
+      case 115200:brn = "5"; break;
+      default:
+        return;
+    }
+    //print("set Baud Rate", br);
+    this.baudRate = br;
+    sendCommand("CAS01," + brn);
   }
-  baudRate = v;
-  sendCommand("CAS01," + br);
-};
+  const to1 = setTimeout(setSerial1BaudRate,1000);
+}
 
 // Set the positioning update rate in milliSec
 AT6558.prototype.setUpdateRate = function(v) {
   var ur = "";
   switch (v) {
-    case 100:
-      ur = "100";
-      break;
-    case 200:
-      ur = "200";
-      break;
-    case 250:
-      ur = "250";
-      break;
-    case 500:
-      ur = "500";
-      break;
-    case 1000:
-      ur = "1000";
-      break;
-    default:
-      return;
+    case 100: ur = "100"; break;
+    case 200: ur = "200"; break;
+    case 250: ur = "250"; break;
+    case 500: ur = "500"; break;
+    case 1000: ur = "1000"; break;
+    default: return;
   }
   updateRate = v;
   this.sendCommand("CAS02," + ur);
@@ -665,7 +666,7 @@ gnss.onInfo(function(snt){print(snt);});
 //gnss.onRMC(function(snt){print(snt);});
 //gnss.onVTG(function(snt){print(snt);});
 //gnss.onZDA(function(snt){print(snt);});
-gnss.onChangeLocation(function(loc){print(loc," dst:",gnss.distance_loc);});
+gnss.onChangeLocation(function(loc){print("loc:",loc," dst:",gnss.distance_loc);});
 gnss.onChangeSpeed(function(speed){print("speed:",speed," dst:",gnss.distance_spd);});
 //gnss.onChangeCourse(function(course){print("course:",course);});
 
@@ -679,7 +680,10 @@ gnss.onStartup(function(){
 });
 
 gnss.powerOn();
+gnss.powerOff();
 
+gnss.setSentences({RMC:"0"});
+  
 //gnss.queryInfo(5);
   
 */
