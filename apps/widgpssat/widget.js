@@ -38,7 +38,7 @@ function testGPSfix() {
   };
 
   var GPSInterval = Bangle.isLCDOn()
-    ? setInterval(()=>WIDGETS["GPSwidget"].draw(), 1000)
+    ? setInterval(()=>WIDGETS["widgpssat"].draw(), 1000)
     : undefined;
   var isSatClear = true;
   var SatCount = 0;
@@ -79,7 +79,7 @@ function testGPSfix() {
   }
 
   // add your widget
-  WIDGETS["GPSSatWidget"]={
+  WIDGETS["widgpssat"]={
     area:"tl", // tl (top left), tr (top right), bl (bottom left), br (bottom right)
     width: 48, // how wide is the widget? You can change this and call Bangle.drawWidgets() to re-layout
     draw:draw // called to draw the widget
