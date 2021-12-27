@@ -4233,6 +4233,21 @@
     {"name":"wsspeed.app.js","url":"wsspeed.app.js"},
     {"name":"wsspeed.img","url":"wsspeed.img.js","evaluate":true}
   ]
-}
+},
+  {
+    "id": "widgpssat",
+    "name": "GPS Sat Widget",
+    "version": "0.03",
+    "description": "Widget to show a status of the GPS. Require firmware v2.08.167 or later",
+    "icon": "widget.png",
+    "type": "widget",
+    "tags": "widget,gps",
+    "supports": ["BANGLEJS","BANGLEJS2"],
+    "readme": "README.md",
+    "storage": [
+      {"name":"widgpssat.wid.js","url":"widget.js"}
+    ]
+  }
+
 
 ]

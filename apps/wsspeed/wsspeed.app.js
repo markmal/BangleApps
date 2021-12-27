@@ -78,6 +78,8 @@ function resetDigits(){
   dSpeed2sec=NaN; dSpeed10sec=NaN; Lp=0;
 }
 
+require("Font8x16").add(Graphics);
+
 function renderSpeeds(speed, speed2s, speed10s, unit) {
   var S = speed.toFixed(1);
   var L = S.length;
@@ -90,13 +92,14 @@ function renderSpeeds(speed, speed2s, speed10s, unit) {
   dF=S.substr(4,1);
 
   //print(S, dH,dD,dS,dF);
-
+  g.setColor(0,0,0);
   g.drawLine(0,25,176,25);
-  g.setFont("6x8",1); 
-  g.clearRect(60, 26, 150, 34);
+  //g.setFont("6x15",1); 
+  g.setFont("8x16");
+  g.clearRect(60, 26, 150, 37);
   g.drawString(TotalDistance.toFixed(2)+" Km", 60, 26);
   
-  var x0=60, dW=30, y0=35;
+  var x0=60, dW=30, y0=38;
   if(speed>=10) x0 = 35;
   if(speed>=100) x0 = 9;
   
@@ -186,7 +189,12 @@ function calcSpeed2n10sec() {
 
 var IsSpeedDisplayDirty=true;
 
-function onGPS(fix) {
+function onGPS_raw(nmea) {
+  print(nmea);
+  if(nmea.substring(3,6) == "GGA") {
+    fix = Bangle.getGPSFix();
+    print("fix.speed: ",fix.speed);
+  }
   Speed = LastFix.speed;
   if (fix.fix && isFinite(fix.speed)) {
      Speed = fix.speed;
@@ -218,7 +226,7 @@ function simulateGPS() {
 }
 
 function onInterval() {
-  simulateGPS();
+  //simulateGPS();
   if(IsSpeedDisplayDirty)
     renderSpeeds(Speed, MaxSpeed2sec, MaxSpeed10sec, "kph");
   IsSpeedDisplayDirty = false;
@@ -294,8 +302,8 @@ function hideMenu() {
 
 //======== BEGIN =======
 g.clear();
-///Bangle.on('GPS', onGPS);
-///Bangle.setGPSPower(1, "app");
+Bangle.on('GPS-raw', onGPS_raw);
+Bangle.setGPSPower(1, "WS Speed");
 DisplayInterval = setInterval(onInterval,1000);
 
 WatchButton = setWatch(onWatchButton, BTN, {edge:"falling", debounce:100, repeat:false});
