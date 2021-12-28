@@ -5086,7 +5086,7 @@
     "description": "Displays time with seconds in the right bottom area. Larger font",
     "icon": "widclkbttm2.png",
     "type": "widget",
-    "tags": "widget clock digital seconds bottom",
+    "tags": "widget,clock,digital,seconds,bottom",
     "supports": ["BANGLEJS","BANGLEJS2"],
     "readme": "README.md",
     "storage": [
@@ -5114,7 +5114,7 @@
     "description": "Widget to show usage of Storage flash",
     "icon": "widget.png",
     "type": "widget",
-    "tags": "widget,storage",
+    "tags": "widget,storage,ssd",
     "supports": ["BANGLEJS","BANGLEJS2"],
     "readme": "README.md",
     "storage": [
