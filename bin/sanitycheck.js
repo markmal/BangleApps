@@ -3,6 +3,7 @@
 */
 
 var fs = require("fs");
+var heatshrink = require("../core/lib/heatshrink");
 var acorn;
 try {
   acorn = require("acorn");
@@ -59,6 +60,7 @@ const STORAGE_KEYS = ['name', 'url', 'content', 'evaluate', 'noOverwite', 'suppo
 const DATA_KEYS = ['name', 'wildcard', 'storageFile', 'url', 'content', 'evaluate'];
 const FORBIDDEN_FILE_NAME_CHARS = /[,;]/; // used as separators in appid.info
 const VALID_DUPLICATES = [ '.tfmodel', '.tfnames' ];
+const GRANDFATHERED_ICONS = ["s7clk",  "snek", "astral", "alpinenav", "slomoclock", "arrow", "pebble", "rebble"];
 
 function globToRegex(pattern) {
   const ESCAPE = '.*+-?^${}()|[]\\';
@@ -175,6 +177,23 @@ apps.forEach((app,appIdx) => {
     for (const key in file) {
       if (!STORAGE_KEYS.includes(key)) ERROR(`App ${app.id} file ${file.name} has unknown key ${key}`);
     }
+    // warn if JS icon is the wrong size
+    if (file.name == app.id+".img") {
+        let icon;
+        let match = fileContents.match(/E\.toArrayBuffer\(atob\(\"([^"]*)\"\)\)/);
+        if (match) icon = Buffer.from(match[1], 'base64');
+        else {
+          match = fileContents.match(/require\(\"heatshrink\"\)\.decompress\(\s*atob\(\s*\"([^"]*)\"\s*\)\s*\)/);
+          if (match) icon = heatshrink.decompress(Buffer.from(match[1], 'base64'));
+          else ERROR(`JS icon ${file.name} does not match the pattern 'require("heatshrink").decompress(atob("..."))'`);
+        }
+        if (match) {
+          if (icon[0] > 48 || icon[0] < 24 || icon[1] > 48 || icon[1] < 24) {
+            if (GRANDFATHERED_ICONS.includes(app.id)) WARN(`JS icon ${file.name} should be 48x48px (or slightly under) but is instead ${icon[0]}x${icon[1]}px`);
+            else ERROR(`JS icon ${file.name} should be 48x48px (or slightly under) but is instead ${icon[0]}x${icon[1]}px`);
+          }
+        }
+    }
   });
   let dataNames = [];
   (app.data||[]).forEach((data)=>{
@@ -207,8 +226,10 @@ apps.forEach((app,appIdx) => {
     }
   });
   // prefer "appid.json" over "appid.settings.json" (TODO: change to ERROR once all apps comply?)
-  if (dataNames.includes(app.id+".settings.json") && !dataNames.includes(app.id+".json"))
+ /* if (dataNames.includes(app.id+".settings.json") && !dataNames.includes(app.id+".json"))
     WARN(`App ${app.id} uses data file ${app.id+'.settings.json'} instead of ${app.id+'.json'}`)
+  else if (dataNames.includes(app.id+".settings.json"))
+    WARN(`App ${app.id} uses data file ${app.id+'.settings.json'}`)*/
   // settings files should be listed under data, not storage (TODO: change to ERROR once all apps comply?)
   if (fileNames.includes(app.id+".settings.json"))
     WARN(`App ${app.id} uses storage file ${app.id+'.settings.json'} instead of data file`)

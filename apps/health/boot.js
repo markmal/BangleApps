@@ -27,7 +27,7 @@ Bangle.on("health", health => {
   const DB_FILE_LEN = DB_HEADER_LEN + DB_RECORDS_PER_MONTH*DB_RECORD_LEN;
 
   function getRecordFN(d) {
-    return "health-"+d.getFullYear()+"-"+d.getMonth()+".raw";
+    return "health-"+d.getFullYear()+"-"+(d.getMonth()+1)+".raw";
   }
   function getRecordIdx(d) {
     return (DB_RECORDS_PER_DAY*(d.getDate()-1)) +
@@ -79,5 +79,6 @@ Bangle.on("health", health => {
   if (health.bpmCnt)
     health.bpm /= health.bpmCnt;
   if (health.movCnt)
+    health.movement /= health.movCnt;
   require("Storage").write(fn, getRecordData(health), sumPos, DB_FILE_LEN);
 });

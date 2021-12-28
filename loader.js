@@ -11,7 +11,7 @@ if (window.location.host=="banglejs.com") {
     'This is not the official Bangle.js App Loader - you can try the <a href="https://banglejs.com/apps/">Official Version</a> here.';
 }
 
-var RECOMMENDED_VERSION = "2v10";
+var RECOMMENDED_VERSION = "2v11";
 // could check http://www.espruino.com/json/BANGLEJS.json for this
 
 // We're only interested in Bangles
@@ -55,7 +55,7 @@ function onFoundDeviceInfo(deviceId, deviceVersion) {
 
 var originalAppJSON = undefined;
 function filterAppsForDevice(deviceId) {
-  if (originalAppJSON===undefined)
+  if (originalAppJSON===undefined && appJSON.length)
     originalAppJSON = appJSON;
 
   var device = DEVICEINFO.find(d=>d.id==deviceId);
@@ -97,8 +97,7 @@ function setSavedDeviceId(deviceId) {
 // At boot, show a window to choose which type of device you have...
 window.addEventListener('load', (event) => {
   let deviceId = getSavedDeviceId()
-  if (deviceId !== undefined)
-    return filterAppsForDevice(deviceId);
+  if (deviceId !== undefined) return; // already chosen
 
   var html = `<div class="columns">
     ${DEVICEINFO.map(d=>`
@@ -168,7 +167,13 @@ window.addEventListener('load', (event) => {
 });
 
 function onAppJSONLoaded() {
-  return new Promise(resolve => {
+  let deviceId = getSavedDeviceId()
+  if (deviceId !== undefined)
+    filterAppsForDevice(deviceId);
+
+  /* Disable external screenshot loading - seems we probably have enough
+  screenshots added manually in apps.json */
+  /*return new Promise(resolve => {
     httpGet("screenshots.json").then(screenshotJSON=>{
       var screenshots = [];
       try {
@@ -186,5 +191,5 @@ function onAppJSONLoaded() {
       console.log("No screenshots.json found");
       resolve();
     });
-  });
+  });*/
 }
