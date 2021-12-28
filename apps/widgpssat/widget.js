@@ -70,7 +70,7 @@
 
   // add your widget
   WIDGETS["widgpssat"]={
-    area:"tl", // tl (top left), tr (top right), bl (bottom left), br (bottom right)
+    area:"tr", // tl (top left), tr (top right), bl (bottom left), br (bottom right)
     width: 48, // how wide is the widget? You can change this and call Bangle.drawWidgets() to re-layout
     draw:draw // called to draw the widget
   };
