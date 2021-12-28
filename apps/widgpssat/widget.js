@@ -1,24 +1,5 @@
 // WIDGETS = {}; // <-- for development only
 
-// This is for testing in emulator
-isTestGPSpower=false;
-isTestGPSfix=false;
-/*
-function testGPSfix() {
-  return {
-  "lat": 43.6364044+(Math.random()-0.5)*0.0001,      // Latitude in degrees
-  "lon": -79.347+(Math.random()-0.5)*0.0001,      // Longitude in degrees
-  "alt": Math.random()*1,      // altitude in M
-  "speed": 30+(Math.random()-0.5)*10,    // Speed in kph
-  "course": 90+(Math.random()-0.5)*20,   // Course in degrees
-  "time": Date.now(),       // Current Time (or undefined if not known)
-  "satellites": Math.round(Math.random()*10),    // Number of satellites
-  "fix": (Math.random() > 0.1 ) ? 1 : 0,            // NMEA Fix state - 0 is no fix
-  "hdop": Math.random()*10     // Horizontal Dilution of Precision
-  }
-}
-*/
-
 // GPS Sat Widget
 (() => {
 
@@ -54,8 +35,8 @@ function testGPSfix() {
   function draw() {
     // add your code
     var x=this.x, y=this.y;
-    if(Bangle.isGPSOn() || isTestGPSpower) {
-      fix = ! isTestGPSfix ? Bangle.getGPSFix() : testGPSfix();
+    if(Bangle.isGPSOn()) {
+      fix = Bangle.getGPSFix();
       //print("fix",fix);
       if (fix && fix.fix) {
         if(SatCount != fix.satellites) {
