@@ -5106,5 +5106,19 @@
     "storage": [
       {"name":"widgpssat.wid.js","url":"widget.js"}
     ]
+  },
+  {
+    "id": "widssd",
+    "name": "Storage Usage Widget",
+    "version": "0.01",
+    "description": "Widget to show usage of Storage flash",
+    "icon": "widget.png",
+    "type": "widget",
+    "tags": "widget,storage",
+    "supports": ["BANGLEJS","BANGLEJS2"],
+    "readme": "README.md",
+    "storage": [
+      {"name":"widssd.wid.js","url":"widget.js"}
+    ]
   }
 ]
