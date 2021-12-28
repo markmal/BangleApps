@@ -16,7 +16,6 @@
     freeStorageSpace = require("Storage").getFree(); 
     var pc = Math.round((process.env.STORAGE-freeStorageSpace)*100/process.env.STORAGE);
     var x=this.x, y=this.y, w=WIDGETS.ssd.width;
-    pc=48;
     var l=Math.round(pc*(w-5)/100);
     g.reset();
     g.clearRect(x, y, x+w, y+23);
