@@ -5079,6 +5079,21 @@
     ]
   },
   {
+    "id": "widclkbttm2",
+    "name": "Bangle2 Digital clock (Bottom) widget",
+    "shortName": "HH:MM:SS clock Bottom Widget",
+    "version": "0.02",
+    "description": "Displays time with seconds in the right bottom area. Larger font",
+    "icon": "widclkbttm2.png",
+    "type": "widget",
+    "tags": "widget clock digital seconds bottom",
+    "supports": ["BANGLEJS2"],
+    "readme": "README.md",
+    "storage": [
+      {"name":"widclkbttm2.wid.js","url":"widclkbttm2.wid.js"}
+    ]
+  },
+  {
     "id": "widgpssat",
     "name": "GPS Sat Widget",
     "version": "0.01",
