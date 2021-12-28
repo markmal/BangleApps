@@ -1,3 +1,5 @@
+// WIDGETS = {}; // <-- for development only
+
 // This is for testing in emulator
 isTestGPSpower=false;
 isTestGPSfix=false;
@@ -44,36 +46,43 @@ function testGPSfix() {
   var SatCount = 0;
   var isCleared = false;
 
+  function drawSat(sat,x,y){
+    g.clearRect(x, y, x+48, y+23);
+    g.drawImage(sat, x, y);
+  }
+
   function draw() {
-      // add your code
+    // add your code
+    var x=this.x, y=this.y;
     if(Bangle.isGPSOn() || isTestGPSpower) {
       fix = ! isTestGPSfix ? Bangle.getGPSFix() : testGPSfix();
-      if (fix) {
+      //print("fix",fix);
+      if (fix && fix.fix) {
         if(SatCount != fix.satellites) {
           g.reset(); // reset the graphics context to defaults (color/font/etc)
-          g.clearRect(this.x, this.y, this.x+48, this.y+23);
-          g.drawImage(SatGreen, this.x, this.y);
+          drawSat(SatGreen, x, y);
           g.setFont("6x8",2);
-          g.drawString(fix.satellites, this.x+22, this.y+2);
+          g.drawString(fix.satellites, x+22, y+2);
           SatCount = fix.satellites;
           isCleared = false;
         }
       }
       else {
+        //print("no fix", isSatClear);
         g.reset();
-        g.clearRect(this.x, this.y, this.x+48, this.y+23);
         if(isSatClear)
-          g.drawImage(SatClear, this.x, this.y);
+          drawSat(SatClear, x, y);
         else 
-          g.drawImage(SatRed, this.x, this.y);
+          drawSat(SatRed, x, y);
         isSatClear = ! isSatClear;
         SatCount = 0;
         isCleared = false;
       }
     }
     else if(!isCleared){
+      //print("isGPSOff");
       g.reset();
-      g.clearRect(this.x, this.y, this.x+48, this.y+23);
+      drawSat(SatClear, x, y);
       isCleared = true;
     }
   }
@@ -85,3 +94,6 @@ function testGPSfix() {
     draw:draw // called to draw the widget
   };
 })();
+
+//Bangle.drawWidgets(); // <-- for development only
+//Bangle.setGPSPower(1,"TST");
