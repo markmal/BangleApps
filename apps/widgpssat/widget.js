@@ -24,8 +24,6 @@
     ? setInterval(()=>WIDGETS.widgpssat.draw(), 1000)
     : undefined;
   var isSatClear = true;
-  var SatCount = 0;
-  var isCleared = false;
 
   function drawSat(sat,x,y){
     g.clearRect(x, y, x+WIDGETS.widgpssat.width, y+23);
@@ -51,7 +49,6 @@
         drawSat(SatGreen, x, y);
         g.setFont("6x8",2);
         g.drawString(fix.satellites, x+22, y+2);
-        isCleared = false;
       }
       else {
         //print("no fix", isSatClear);
@@ -62,16 +59,13 @@
         else 
           drawSat(SatRed, x, y);
         isSatClear = ! isSatClear;
-        SatCount = 0;
-        isCleared = false;
       }
     }
-    else if(!isCleared){
+    else {
       //print("isGPSOff");
       g.reset();
       setWidth(26);
       drawSat(SatClear, x, y);
-      isCleared = true;
     }
   }
 
