@@ -1,4 +1,4 @@
-// WIDGETS = {}; // <-- for development only
+//WIDGETS = {}; // <-- for development only
 
 // GPS Sat Widget
 (() => {
@@ -21,17 +21,24 @@
   };
 
   var GPSInterval = Bangle.isLCDOn()
-    ? setInterval(()=>WIDGETS["widgpssat"].draw(), 1000)
+    ? setInterval(()=>WIDGETS.widgpssat.draw(), 1000)
     : undefined;
   var isSatClear = true;
   var SatCount = 0;
   var isCleared = false;
 
   function drawSat(sat,x,y){
-    g.clearRect(x, y, x+48, y+23);
+    g.clearRect(x, y, x+WIDGETS.widgpssat.width, y+23);
     g.drawImage(sat, x, y);
   }
 
+  function setWidth(w){
+    if(WIDGETS.widgpssat.width != w) {
+      WIDGETS.widgpssat.width = w;
+      Bangle.drawWidgets();
+    }
+  }
+  
   function draw() {
     // add your code
     var x=this.x, y=this.y;
@@ -39,18 +46,17 @@
       fix = Bangle.getGPSFix();
       //print("fix",fix);
       if (fix && fix.fix) {
-        if(SatCount != fix.satellites) {
-          g.reset(); // reset the graphics context to defaults (color/font/etc)
-          drawSat(SatGreen, x, y);
-          g.setFont("6x8",2);
-          g.drawString(fix.satellites, x+22, y+2);
-          SatCount = fix.satellites;
-          isCleared = false;
-        }
+        g.reset(); // reset the graphics context to defaults (color/font/etc)
+        setWidth(26 + g.stringWidth(fix.satellites));
+        drawSat(SatGreen, x, y);
+        g.setFont("6x8",2);
+        g.drawString(fix.satellites, x+22, y+2);
+        isCleared = false;
       }
       else {
         //print("no fix", isSatClear);
         g.reset();
+        setWidth(24);
         if(isSatClear)
           drawSat(SatClear, x, y);
         else 
@@ -63,15 +69,16 @@
     else if(!isCleared){
       //print("isGPSOff");
       g.reset();
+      setWidth(26);
       drawSat(SatClear, x, y);
       isCleared = true;
     }
   }
 
   // add your widget
-  WIDGETS["widgpssat"]={
+  WIDGETS.widgpssat = {
     area:"tr", // tl (top left), tr (top right), bl (bottom left), br (bottom right)
-    width: 48, // how wide is the widget? You can change this and call Bangle.drawWidgets() to re-layout
+    width: 26, // how wide is the widget? You can change this and call Bangle.drawWidgets() to re-layout
     draw:draw // called to draw the widget
   };
 })();
