@@ -5087,7 +5087,7 @@
     "icon": "widclkbttm2.png",
     "type": "widget",
     "tags": "widget clock digital seconds bottom",
-    "supports": ["BANGLEJS2"],
+    "supports": ["BANGLEJS","BANGLEJS2"],
     "readme": "README.md",
     "storage": [
       {"name":"widclkbttm2.wid.js","url":"widget.js"}
