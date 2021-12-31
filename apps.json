@@ -5096,7 +5096,7 @@
   {
     "id": "widgpssat",
     "name": "GPS Sat Widget",
-    "version": "0.01",
+    "version": "0.02",
     "description": "Widget to show a status of the GPS. Require firmware v2.08.167 or later",
     "icon": "widget.png",
     "type": "widget",
