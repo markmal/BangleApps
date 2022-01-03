@@ -8,23 +8,35 @@ See usage examples at the bottom
 
 AT6558 = function(id){
   this.id = id;
-  this.acturer = "";
-  this.IC = "";
-  this.SW = "";
-  this.build_time = "";
-  this.mode = "";
-  AT6558.prototype.serialBaudRate = 9600;
-  AT6558.prototype.baudRate = 9600;
-  this.updateRate = NaN;
+  this._ = AT6558.prototype; // Global vars of prototype level
+  this._.sys = "";
+  this._.IC = "";
+  this._.SW = "";
+  this._.buildTime = "";
+  this._.mode = "";
+  this._.status = "";
+  this._.lat = NaN;
+  this._.lon = NaN;
+  this._.SOG_kn = NaN;
+  this._.SOG_km = NaN;
+  this._.COG = NaN;
+  this._.date = "1970-01-01";
+  this._.time = "00:00:00";
+  this._.FS = 0;
+  this._.numSats = 0;
+  this._.msl = 0;
+  this._.serialBaudRate = 9600;
+  this._.baudRate = 9600;
+  this._.updateRates = {};
+  this._.ActiveSats=[];
+  this._.ViewSats=[];
+  this._.isStartUp = false;
   this.needsValidation = false;
-  this.ActiveSats=[];
-  this.ViewSats=[];
   this.distance_loc = 0.0;
   this.distance_spd = 0.0;
   this.TZ = "00:00";
   this.distSpdSOG = NaN;
   this.distLocTime = new Date();
-  this.isStartUp = false;
   this.sensitivitySpd = 0.1; // kph
   this.sensitivityLoc = 0.00001; // dgr
   this.sensitivityCrs = 1.0; // dgr 
@@ -72,10 +84,10 @@ AT6558.prototype.isNMEA = function(line) {
 AT6558.prototype.addDistLoc = function(prev) {
   if(!this.chngLocTime) this.chngLocTime=this.datetime;
   if(this.chngLocTime != this.datetime 
-     && !isNaN(prev.lat) && !isNaN(this.lat)
-     && !isNaN(prev.lon) && !isNaN(this.lon)
-     && (prev.lat != this.lat || prev.lon != this.lon)){
-    this.distance_loc += this.distance(prev.lat, prev.lon, this.lat, this.lon);
+     && !isNaN(prev.lat) && !isNaN(this._.lat)
+     && !isNaN(prev.lon) && !isNaN(this._.lon)
+     && (prev.lat != this._.lat || prev.lon != this._.lon)){
+    this.distance_loc += this.distance(prev.lat, prev.lon, this._.lat, this._.lon);
     this.chngLocTime = this.datetime;
   }
 };
@@ -85,9 +97,9 @@ AT6558.prototype.addDistSpd = function(){
   if(!isNaN(this.SOG_km) && this.datetime
        && this.datetime != this.distSpdTime) {
     if(!this.distSpdTime) this.distSpdTime = this.datetime;
-    if(isNaN(this.distSpdSOG)) this.distSpdSOG = this.SOG_km;
-    this.distance_spd += 0.5*(this.distSpdSOG+this.SOG_km)/3.6 * (this.datetime-this.distSpdTime)*0.001; // m
-    this.distSpdSOG = this.SOG_km;
+    if(isNaN(this.distSpdSOG)) this.distSpdSOG = this._.SOG_km;
+    this.distance_spd += 0.5*(this.distSpdSOG+this._.SOG_km)/3.6 * (this.datetime-this.distSpdTime)*0.001; // m
+    this.distSpdSOG = this._.SOG_km;
     this.distSpdTime = this.datetime;
   }
 };
@@ -118,18 +130,22 @@ AT6558.prototype.onInfo = function(callback){
   this.cbInfo = callback;
 };
 
-AT6558.prototype.hndlInfo = function(sntc) {
-  var txt = sntc.substr(15,255);
-  var fld = txt.substr(0,3);
-  var val = txt.substr(3,255);
-  if(fld == "MA=") this.manufacturer = val; 
-  if(fld == "IC=") this.IC = val;
-  if(fld == "SW=") this.SW = val;
-  if(fld == "TB=") this.buildTime = val; 
-  if(fld == "MO=") this.mode = val;
-  if(this.mode && this.cbInfo) this.cbInfo({
-      manufacturer:this.manufacturer, 
-      ID:this.IC, SW:this.SW, buildTime:this.buildTime, mode:this.mode});
+AT6558.prototype.getChipInfo = function() {
+  return { manufacturer:this._.manufacturer, 
+      ID:this._.IC, SW:this._.SW, buildTime:this._.buildTime, 
+      mode:this._.mode};
+}
+
+AT6558.prototype.hndlInfo = function(msg) {
+  //print("hndlInfo:",msg);
+  var fld = msg.substr(0,3);
+  var val = msg.substr(3,255);
+  if(fld == "MA=") this._.manufacturer = val; 
+  if(fld == "IC=") this._.IC = val;
+  if(fld == "SW=") this._.SW = val;
+  if(fld == "TB=") this._.buildTime = val; 
+  if(fld == "MO=") this._.mode = val;
+  if(this.cbInfo) this.cbInfo(msg);
 };
 
 // ANT - Antenna Status. For Bangle2 is always Open because it has a passive antenna.
@@ -137,20 +153,22 @@ AT6558.prototype.onANT = function(callback){
   this.cbANT = callback;
 };
 
-// process amy TXT and call either ANT or Info handler
+// process any TXT and call either ANT or Info handler
 AT6558.prototype.hndlTXT = function(sntc) {
-  if(sntc.substr(0,15) == "GPTXT,01,01,02,")
-    this.hndlInfo(sntc);
-  else {
+  var xx = sntc.substr(6,2); // total rows
+  var yy = sntc.substr(9,2); // row number
+  var zz = sntc.substr(12,2); // 00-error, 01-warning, 02-info, 07-custom
+  var msg = sntc.substr(15,64);
+  if(xx=="01" && yy=="01" && zz=="02")
+    this.hndlInfo(msg);
+  else if(xx=="01" && yy=="01" && zz=="01"){
     //print(sntc);
-    if(this.cbANT) this.cbANT({
-      sys: sntc.substr(0,2),
-      cmd: sntc.substr(2,3),
-      xx: sntc.substr(6,2),
-      yy: sntc.substr(9,2),
-      zz: sntc.substr(12,2),
-      msg: sntc.substr(15,64)
-      });
+    if(msg.includes("ANTENNA")) {
+      this._.antenna = msg;
+      if(this.cbANT) this.cbANT({
+        antenna: this._.antenna
+        });
+    }
   }
 };
 
@@ -161,28 +179,28 @@ AT6558.prototype.onDHV = function(callback){
 
 AT6558.prototype.hndlDHV = function(sntc) {
   //print("DHV "+sntc);
-  var prev = {SOG_km:this.SOG_km, datetime:this.datetime};
+  var prev = {SOG_km:this._.SOG_km, datetime:this.datetime};
   var d = sntc.split(",");
-  if(d[1]) this.time = this.nmeaTtoTime(d[1]);
-  this.speed3D = parseFloat(d[2]);
-  this.spdX = parseFloat(d[3]);
-  this.spdY = parseFloat(d[4]);
-  this.spdZ = parseFloat(d[5]);
-  this.spdG = parseFloat(d[6]); // m/s
-  this.SOG_km = this.spdG * 3.6;
-  if(this.time && this.date) 
-    this.datetime = new Date(this.date+"T"+this.time+"+"+this.TZ);
+  if(d[1]) this._.time = this.nmeaTtoTime(d[1]);
+  this._.speed3D = parseFloat(d[2]);
+  this._.spdX = parseFloat(d[3]);
+  this._.spdY = parseFloat(d[4]);
+  this._.spdZ = parseFloat(d[5]);
+  this._.spdG = parseFloat(d[6]); // m/s
+  this._.SOG_km = this._.spdG * 3.6;
+  if(this._.time && this._.date) 
+    this.datetime = new Date(this._.date+"T"+this._.time+"+"+this.TZ);
 
   this.addDistSpd();
 
   if(this.cbDHV) this.cbDHV({
-    sys: this.sys,
-    time: this.time,
-    speed3D: this.speed3D,
-    spdX: this.spdX,
-    spdY: this.spdY,
-    spdZ: this.spdZ,
-    spdG: this.spdG
+    sys: this._.sys,
+    time: this._.time,
+    speed3D: this._.speed3D,
+    spdX: this._.spdX,
+    spdY: this._.spdY,
+    spdZ: this._.spdZ,
+    spdG: this._.spdG
     });
 };
 
@@ -194,41 +212,41 @@ AT6558.prototype.onGGA = function(callback){
 
 AT6558.prototype.hndlGGA = function(sntc) {
   //print("GGA "+sntc);
-  var prev = {lat:this.lat, lon:this.lon, datetime:this.datetime};
+  var prev = {lat:this._.lat, lon:this._.lon, datetime:this.datetime};
   var d = sntc.split(",");
-  if(d[1]) this.time = this.nmeaTtoTime(d[1]);
-  this.lat = this.nmeaAtoAngle(d[2],d[3]);
-  this.lon = this.nmeaAtoAngle(d[4],d[5]);
-  this.FS = parseInt(d[6]);
-  this.numSV = parseInt(d[7]);
-  this.HDOP = parseFloat(d[8]);
-  this.MSL = parseFloat(d[9]);
+  if(d[1]) this._.time = this.nmeaTtoTime(d[1]);
+  this._.lat = this.nmeaAtoAngle(d[2],d[3]);
+  this._.lon = this.nmeaAtoAngle(d[4],d[5]);
+  this._.FS = parseInt(d[6]);
+  this._.numSats = parseInt(d[7]);
+  this._.HDOP = parseFloat(d[8]);
+  this._.MSL = parseFloat(d[9]);
   //this.uMSL = d[10];
-  this.sep = parseFloat(d[11]);
+  this._.sep = parseFloat(d[11]);
   //this.uSep = d[12];
-  this.diffAge = parseFloat(d[13]);
-  this.diffSta = parseFloat(d[14]);
-  if(this.time && this.date) 
-    this.datetime = new Date(this.date+"T"+this.time+"+"+this.TZ);
+  this._.diffAge = parseFloat(d[13]);
+  this._.diffSta = parseFloat(d[14]);
+  if(this._.time && this._.date) 
+    this.datetime = new Date(this._.date+"T"+this._.time+"+"+this.TZ);
 
   this.addDistLoc(prev);
-  if(this.cbChngLoc && !isNaN(prev.lat) && !isNaN(this.lat) 
-     && (prev.lat != this.lat || prev.lon != this.lon)){
-    this.cbChngLoc({lat:this.lat, lon:this.lon});
+  if(this.cbChngLoc && !isNaN(prev.lat) && !isNaN(this._.lat) 
+     && (prev.lat != this._.lat || prev.lon != this._.lon)){
+    this.cbChngLoc({lat:this._.lat, lon:this._.lon});
   }
 
   if(this.cbGGA) this.cbGGA({
-    sys: this.sys,
-    time: this.time,
-    lat: this.lat,
-    lon: this.lon,
-    FS: this.FS,
-    numSV: this.numSV,
-    HDOP: this.HDOP,
-    MSL: this.MSL,
-    sep: this.sep,
-    diffAge: this.diffAge,
-    diffSta: this.diffSta
+    sys: this._.sys,
+    time: this._.time,
+    lat: this._.lat,
+    lon: this._.lon,
+    FS: this._.FS,
+    numSV: this._.numSats,
+    HDOP: this._.HDOP,
+    MSL: this._.MSL,
+    sep: this._.sep,
+    diffAge: this._.diffAge,
+    diffSta: this._.diffSta
     });
 };
 
@@ -239,30 +257,30 @@ AT6558.prototype.onGLL = function(callback){
 
 AT6558.prototype.hndlGLL = function(sntc) {
   //print("GLL: "+sntc);
-  var prev = {lat:this.lat, lon:this.lon, datetime:this.datetime};
+  var prev = {lat:this._.lat, lon:this._.lon, datetime:this.datetime};
   var d = sntc.split(",");
-  this.lat = this.nmeaAtoAngle(d[1],d[2]);
-  this.lon = this.nmeaAtoAngle(d[3],d[4]);
-  if(d[5]) this.time = this.nmeaTtoTime(d[5]);
-  this.status = d[6];
-  this.mode = d[7];
-  if(this.time && this.date) 
-    this.datetime = new Date(this.date+"T"+this.time+"+"+this.TZ);
+  this._.lat = this.nmeaAtoAngle(d[1],d[2]);
+  this._.lon = this.nmeaAtoAngle(d[3],d[4]);
+  if(d[5]) this._.time = this.nmeaTtoTime(d[5]);
+  this._.status = d[6];
+  this._.mode = d[7];
+  if(this._.time && this._.date) 
+    this.datetime = new Date(this._.date+"T"+this._.time+"+"+this.TZ);
 
   this.addDistLoc(prev);
-  if(this.cbChngLoc && !isNaN(prev.lat) && !isNaN(this.lat) 
-     && (Math.abs(prev.lat - this.lat) >= this.sensitivityLoc 
-      || Math.abs(prev.lon - this.lon) >= this.sensitivityLoc)){
-    this.cbChngLoc({lat:this.lat, lon:this.lon});
+  if(this.cbChngLoc && !isNaN(prev.lat) && !isNaN(this._.lat) 
+     && (Math.abs(prev.lat - this._.lat) >= this.sensitivityLoc 
+      || Math.abs(prev.lon - this._.lon) >= this.sensitivityLoc)){
+    this.cbChngLoc({lat:this._.lat, lon:this._.lon});
   }
 
   if(this.cbGLL) this.cbGLL({
-    sys: this.sys,
-    lat: this.lat,
-    lon: this.lon,
-    time: this.time,
-    status: this.status,
-    mode: this.mode
+    sys: this._.sys,
+    lat: this._.lat,
+    lon: this._.lon,
+    time: this._.time,
+    status: this._.status,
+    mode: this._.mode
     });
 };
 
@@ -274,24 +292,31 @@ AT6558.prototype.onGSA = function(callback){
 AT6558.prototype.hndlGSA = function(sntc) {
   //print("GSA: "+sntc);
   var d = sntc.split(",");
-  this.Smode = d[1];
-  this.FS = d[2];
-  this.systemId=d[18];
-  var sid=parseInt(this.systemId)-1;
-  this.ActiveSats[sid]=[d[3],d[4],d[5],d[6],d[7],d[8],d[9],d[10],d[11],d[12],d[13],d[14]];
-  this.PDOP=d[15];
-  this.HDOP=d[16];
-  this.VDOP=d[17];
-  
+  this._.Smode = d[1];
+  this._.FS = d[2];
+  this._.systemId=d[18];
+  var sid=parseInt(this._.systemId)-1;
+  this._.ActiveSats[sid]=[d[3],d[4],d[5],d[6],d[7],d[8],d[9],d[10],d[11],d[12],d[13],d[14]];
+  this._.PDOP=d[15];
+  this._.HDOP=d[16];
+  this._.VDOP=d[17];
+
+  this._.numSats = 0;
+  var i = 0;
+  while(i < this.ActiveSats.length){
+    if(this.ActiveSats[i] != "") this._.numSats++;
+    i++;
+  }
+
   if(this.cbGSA) this.cbGSA({
-    sys: this.sys,
-    Smode: this.Smode,
-    FS: this.FS,
+    sys: this._.sys,
+    Smode: this._.Smode,
+    FS: this._.FS,
     ActiveSats: this.ActiveSats,
-    PDOP: this.PDOP,
-    HDOP: this.HDOP,
-    VDOP: this.VDOP,
-    systemId: this.systemId
+    PDOP: this._.PDOP,
+    HDOP: this._.HDOP,
+    VDOP: this._.VDOP,
+    systemId: this._.systemId
     });
 };
 
@@ -301,28 +326,28 @@ AT6558.prototype.onGST = function(callback){
 };
 
 AT6558.prototype.hndlGST = function(sntc) {
-  print("GST "+sntc);
+  //print("GST "+sntc);
   var d = sntc.split(",");
-  if(d[1]) this.time = this.nmeaTtoTime(d[1]);
-  this.RMS = parseFloat(d[2]);
-  this.stdDevMaj = parseFloat(d[3]);
-  this.stdDevMin = parseFloat(d[4]);
-  this.orientation = parseFloat(d[5]);
-  this.stdLat = parseFloat(d[6]);
-  this.stdLon = parseFloat(d[7]);
-  this.stdAlt = parseFloat(d[8]);
-  if(this.time && this.date) 
-    this.datetime = new Date(this.date+"T"+this.time+"+"+this.TZ);
+  if(d[1]) this._.time = this.nmeaTtoTime(d[1]);
+  this._.RMS = parseFloat(d[2]);
+  this._.stdDevMaj = parseFloat(d[3]);
+  this._.stdDevMin = parseFloat(d[4]);
+  this._.orientation = parseFloat(d[5]);
+  this._.stdLat = parseFloat(d[6]);
+  this._.stdLon = parseFloat(d[7]);
+  this._.stdAlt = parseFloat(d[8]);
+  if(this._.time && this._.date) 
+    this.datetime = new Date(this._.date+"T"+this._.time+"+"+this.TZ);
 
   if(!isNaN(this.RMS) && this.cbGST) this.cbGST({
-    sys: this.sys,
-    RMS: this.RMS,
-    stdDevMaj: this.stdDevMaj,
-    stdDevMin: this.stdDevMin,
-    orientation: this.orientation,
-    stdLat: this.stdLat,
-    stdLon: this.stdLon,
-    stdAlt: this.stdAlt
+    sys: this._.sys,
+    RMS: this._.RMS,
+    stdDevMaj: this._.stdDevMaj,
+    stdDevMin: this._.stdDevMin,
+    orientation: this._.orientation,
+    stdLat: this._.stdLat,
+    stdLon: this._.stdLon,
+    stdAlt: this._.stdAlt
     });
 };
 
@@ -338,19 +363,19 @@ AT6558.prototype.hndlGSV = function(sntc) {
   var msgNo = parseInt(d[2]);
   var numSV = parseInt(d[3]);
   if(msgNo==1) this.GSV_Sn=0;
-  if(!this.ViewSats[this.sys]) this.ViewSats[this.sys]=[];
+  if(!this._.ViewSats[this._.sys]) this._.ViewSats[this._.sys]=[];
   var i=4; var n=d.length-1;
   while(i < n){
     var vs={SVId:d[i++], Ele:d[i++], Az:d[i++], cn0:d[i++]};
-    this.ViewSats[this.sys][this.GSV_Sn] = vs;
-    this.GSV_Sn++;
+    this._.ViewSats[this._.sys][this._.GSV_Sn] = vs;
+    this._.GSV_Sn++;
   }
-  this.signalId = d[i];
+  this._.signalId = d[i];
 
   if(msgNo==numMsg && this.cbGSV) this.cbGSV({
-    sys: this.sys,
-    ViewSats: this.ViewSats,
-    signalId: this.signalId
+    sys: this._.sys,
+    ViewSats: this._.ViewSats,
+    signalId: this._.signalId
     });
 };
 
@@ -361,53 +386,53 @@ AT6558.prototype.onRMC = function(callback){
 
 AT6558.prototype.hndlRMC = function(sntc) {
   //print("RMC "+sntc);
-  var prev = {lat:this.lat, lon:this.lon, 
-              SOG_km:this.SOG_km, COG:this.COG, 
+  var prev = {lat:this._.lat, lon:this._.lon, 
+              SOG_km:this._.SOG_km, COG:this._.COG, 
               datetime:this.datetime};
   var d = sntc.split(",");
   if(d[1]&&d[9]) this.datetime = this.nmeaDTtoDateTime(d[9],d[1]);
-  if(d[1]) this.time = this.nmeaTtoTime(d[1]);
-  this.status = d[2];
-  this.lat = this.nmeaAtoAngle(d[3],d[4]);
-  this.lon = this.nmeaAtoAngle(d[5],d[6]);
-  this.SOG_kn = parseFloat(d[7]);
-  this.SOG_km = 1.852 * this.SOG_kn;
-  this.COG = parseFloat(d[8]);
-  if(d[9]) this.date = this.nmeaDtoDate(d[9]);
-  this.MV = this.nmeaAtoAngle(d[10],d[11]);
-  this.mode = d[12];
-  this.navStatus = d[13];
+  if(d[1]) this._.time = this.nmeaTtoTime(d[1]);
+  this._.status = d[2];
+  this._.lat = this.nmeaAtoAngle(d[3],d[4]);
+  this._.lon = this.nmeaAtoAngle(d[5],d[6]);
+  this._.SOG_kn = parseFloat(d[7]);
+  this._.SOG_km = 1.852 * this.SOG_kn;
+  this._.COG = parseFloat(d[8]);
+  if(d[9]) this._.date = this.nmeaDtoDate(d[9]);
+  this._.MV = this.nmeaAtoAngle(d[10],d[11]);
+  this._.mode = d[12];
+  this._.navStatus = d[13];
 
   this.addDistLoc(prev);
-  if(this.cbChngLoc && !isNaN(prev.lat) && !isNaN(this.lat) 
-     && (Math.abs(prev.lat - this.lat) >= this.sensitivityLoc 
-      || Math.abs(prev.lon - this.lon) >= this.sensitivityLoc)){
-    this.cbChngLoc({lat:this.lat, lon:this.lon});
+  if(this.cbChngLoc && !isNaN(prev.lat) && !isNaN(this._.lat) 
+     && (Math.abs(prev.lat - this._.lat) >= this.sensitivityLoc 
+      || Math.abs(prev.lon - this._.lon) >= this.sensitivityLoc)){
+    this.cbChngLoc({lat:this._.lat, lon:this._.lon});
   }
 
   this.addDistSpd();
-  if(this.cbChngSpd && !isNaN(this.SOG_km) 
-    && Math.abs(prev.SOG_km - this.SOG_km) >= this.sensitivitySpd ){
-    this.cbChngSpd(this.SOG_km);
+  if(this.cbChngSpd && !isNaN(this._.SOG_km) 
+    && Math.abs(prev.SOG_km - this._.SOG_km) >= this.sensitivitySpd ){
+    this.cbChngSpd(this._.SOG_km);
   }
 
-  if(this.cbChngCrs && !isNaN(this.COG) 
-    && Math.abs(prev.COG - this.COG) >= this.sensitivityCrs )
-    this.cbChngCrs(this.COG);
+  if(this.cbChngCrs && !isNaN(this._.COG) 
+    && Math.abs(prev.COG - this._.COG) >= this.sensitivityCrs )
+    this.cbChngCrs(this._.COG);
 
   if(this.cbRMC) this.cbRMC({
-    sys: this.sys,
+    sys: this._.sys,
     datetime: this.datetime,
-    time: this.time,
-    status: this.status,
-    lat: this.lat,
-    lon: this.lon,
-    SOG_kn: this.SOG_kn,
-    COG: this.COG,
-    date: this.date,
-    MV: this.MV,
-    mode: this.mode,
-    navStatus: this.navStatus
+    time: this._.time,
+    status: this._.status,
+    lat: this._.lat,
+    lon: this._.lon,
+    SOG_kn: this._.SOG_kn,
+    COG: this._.COG,
+    date: this._.date,
+    MV: this._.MV,
+    mode: this._.mode,
+    navStatus: this._.navStatus
     });
 };
 
@@ -420,28 +445,28 @@ AT6558.prototype.hndlVTG = function(sntc) {
   //print("VTG "+sntc);
   var prev = {SOG_km:this.SOG_km, COG:this.COG};
   var d = sntc.split(",");
-  this.COG = parseFloat(d[1]);
-  this.COGM = parseFloat(d[3]);
-  this.SOG_kn = parseFloat(d[5]);
-  this.SOG_km = parseFloat(d[7]);
-  this.mode = d[9];
+  this._.COG = parseFloat(d[1]);
+  this._.COGM = parseFloat(d[3]);
+  this._.SOG_kn = parseFloat(d[5]);
+  this._.SOG_km = parseFloat(d[7]);
+  this._.mode = d[9];
 
   this.addDistSpd();
-  if(this.cbChngSpd && !isNaN(this.SOG_km) 
-    && Math.abs(prev.SOG_km - this.SOG_km) >= this.sensitivitySpd ){
+  if(this.cbChngSpd && !isNaN(this._.SOG_km) 
+    && Math.abs(prev.SOG_km - this._.SOG_km) >= this.sensitivitySpd ){
     this.cbChngSpd(this.SOG_km);
   }
-  if(this.cbChngCrs && !isNaN(this.COG) 
-    && Math.abs(prev.COG - this.COG) >= this.sensitivityCrs )
-    this.cbChngCrs(this.COG);
+  if(this.cbChngCrs && !isNaN(this._.COG) 
+    && Math.abs(prev.COG - this._.COG) >= this.sensitivityCrs )
+    this.cbChngCrs(this._.COG);
 
   if(!isNaN(this.SOG_kn) && this.cbVTG) this.cbVTG({
-    sys: this.sys,
-    COGT: this.COGT,
-    COGM: this.COGM,
-    SOG_kn: this.SOG_kn,
-    SOG_km: this.SOG_km,
-    mode: this.mode,
+    sys: this._.sys,
+    COG: this._.COGT,
+    COGM: this._.COGM,
+    SOG_kn: this._.SOG_kn,
+    SOG_km: this._.SOG_km,
+    mode: this._.mode,
     });
 };
 
@@ -453,17 +478,17 @@ AT6558.prototype.onZDA = function(callback){
 AT6558.prototype.hndlZDA = function(sntc) {
   //print("ZDA "+sntc);
   var d = sntc.split(",");
-  if(d[1]) this.time = this.nmeaTtoTime(d[1]);
-  this.date = d[4]+"-"+d[3]+"-"+d[2];
+  if(d[1]) this._.time = this.nmeaTtoTime(d[1]);
+  this._.date = d[4]+"-"+d[3]+"-"+d[2];
   this.TZ = d[5]+":"+d[6];
-  if(this.time && this.date) 
-    this.datetime = new Date(this.date+"T"+this.time+"+"+this.TZ);
+  if(this._.time && this._.date) 
+    this.datetime = new Date(this._.date+"T"+this._.time+"+"+this.TZ);
 
   if(this.cbZDA) this.cbZDA({
-    sys: this.sys,
+    sys: this._.sys,
     datetime: this.datetime,
-    time: this.time,
-    date: this.date,
+    time: this._.time,
+    date: this._.date,
     TZ: this.TZ
     });
 };
@@ -483,15 +508,18 @@ AT6558.prototype.hndlNMEA = function(line) {
   var sntc = line.substring(1,line.length-3);
   var cksm = line.substr(line.length-2,2);
   if(this.needsValidation && this.checksum(sntc)!=cksm) { 
-    print("Wrong checksum:",cksm);
+    //print("Wrong checksum:",cksm);
     //this.checksum(sntc), sntc);
     return false;
   }
   if(this.cbNMEA){
-    if(this.isStartUp && this.cbStartUp){ this.cbStartUp(); this.isStartUp=false;}
-    this.cbNMEA(sntc);
+    if(this._.isStartUp && this.cbStartUp){ 
+      print("STARTUP");
+      this.cbStartUp(); this._.isStartUp=false;
+      }
+    this.cbNMEA(line);
   }
-  this.sys = sntc.substr(0,2);
+  this._.sys = sntc.substr(0,2);
   this.cmd = sntc.substr(2,3);
   switch (this.cmd) {
     case "GGA": this.hndlGGA(sntc); break;
@@ -534,6 +562,17 @@ AT6558.prototype.powerOff = function() {
   Bangle.setGPSPower(0, this.id);
 };
 
+// Compatibility with Bangle
+AT6558.prototype.getGPSFix = function() {
+  var d = this._;
+  var fix = ((d.FS)?d.FS:(d.FS=="A")?1:0); 
+  return {time:d.datetime, lat:d.lat, lon:d.lon, 
+    fix:fix, satellites:d.numSats, altitude:d.msl,
+    speed:d.SOG_km,
+    status:d.status, mode:d.mode};
+}
+
+
 //// ----------- Configuration and Control functions
 
 // CAS00-Save Configuration 
@@ -546,11 +585,11 @@ AT6558.prototype.saveConfiguration = function() {
 function setSerial1BaudRate(){
   //print("set Serial1 BaudRate", baudRate);
   Serial1.setup(baudRate,{rx:D30, tx:D31});
-  this.serialBaudRate = baudRate;
+  this._.serialBaudRate = baudRate;
 }
 
 function setBaudRate(br){
-  if(this.serialBaudRate == this.baudRate){
+  if(this._.serialBaudRate == this._.baudRate){
     var brn = "";
     switch (br) {
       case 4800:  brn = "0"; break;
@@ -563,7 +602,7 @@ function setBaudRate(br){
         return;
     }
     //print("set Baud Rate", br);
-    this.baudRate = br;
+    this._.baudRate = br;
     sendCommand("CAS01," + brn);
   }
   const to1 = setTimeout(setSerial1BaudRate,1000);
@@ -571,17 +610,9 @@ function setBaudRate(br){
 
 // Set the positioning update rate in milliSec
 AT6558.prototype.setUpdateRate = function(v) {
-  var ur = "";
-  switch (v) {
-    case 100: ur = "100"; break;
-    case 200: ur = "200"; break;
-    case 250: ur = "250"; break;
-    case 500: ur = "500"; break;
-    case 1000: ur = "1000"; break;
-    default: return;
-  }
-  updateRate = v;
-  this.sendCommand("CAS02," + ur);
+  if(!(v==100||v==200||v==250||v==500||v==1000)) return;
+  this._.updateRate = v;
+  this.sendCommand("CAS02," + v.toString(0));
 };
 
 /*Set the NMEA sentence that requires output or stop output.
@@ -594,22 +625,26 @@ AT6558.prototype.setUpdateRate = function(v) {
 AT6558.prototype.setSentencesS = function(nGGA,nGLL,nGSA,nGSV,nRMC,nVTG,nZDA,nANT,nDHV,nTXT,nGST) {
   this.sendCommand("CAS03,"+nGGA+","+nGLL+","+nGSA+","+nGSV+","+nRMC+","
     +nVTG+","+nZDA+","+nANT+","+nDHV+",,"+nTXT+",,,"+nGST );
+  this._.sentences = {GGA:nGGA,GLL:nGLL,GSA:nGSA,GSV:nGSV,RMC:nRMC,VTG:nVTG,ZDA:nZDA,ANT:nANT,DHV:nDHV,TXT:nTXT,GST:nGST};
 };
 AT6558.prototype.setSentences = function(sents) {
   this.sendCommand("CAS03,"+(sents.GGA||'')+","+(sents.GLL||'')+","+
     (sents.GSA||'')+","+(sents.GSV||'')+","+(sents.RMC||'')+","+
     (sents.VTG||'')+","+(sents.ZDA||'')+","+(sents.ANT||'')+","+
     (sents.DHV||'')+",,"+(sents.TXT||'')+",,,"+(sents.GST||'') );
+  this._.sentences = sents;
 };
 AT6558.prototype.setSentencesAll = function(n) {
   this.sendCommand("CAS03,"+n+","+n+","+n+","+n+","+n+","
     +n+","+n+","+n+","+n+",,"+n+",,,"+n );
+  this._.sentences = {GGA:n,GLL:n,GSA:n,GSV:n,RMC:n,VTG:n,ZDA:n,ANT:n,DHV:n,TXT:n,GST:n};
 };
 
 // Configure the working system (constellations)). Set 0 or 1 for each system
 AT6558.prototype.setSystems = function(nGPS, nBDS, nGLONASS) {
   var n = nGPS | 2*nBDS | 4*nGLONASS;
   this.sendCommand("CAS04,"+n.toFixed(0));
+  this._.systems={GPS:nGPS, BDS:nBDS, GLONASS:nGLONASS};
 };
 
 /* Set NMEA protocol type selection. There are many types of protocols
@@ -621,6 +656,7 @@ AT6558.prototype.setSystems = function(nGPS, nBDS, nGLONASS) {
  9 - Compatible with single GPS NMEA0183 protocol, compatible with NMEA 2.2 version */ 
 AT6558.prototype.setProtocol = function(n) {
   this.sendCommand("CAS05,"+n.toFixed(0));
+  this._.protocol = n;
 };
 
 /* Query product information
@@ -652,7 +688,7 @@ exports.connect = function(id) {
 
 // ========= TEST and Examples ================= //
 /*
-
+require("AT6558");
 gnss = new AT6558("TST");
 gnss.powerOff();
 //gnss.needsValidation = true;
