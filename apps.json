@@ -5120,5 +5120,21 @@
     "storage": [
       {"name":"widssd.wid.js","url":"widget.js"}
     ]
+  },
+  {
+    "id": "nerdic",
+    "name": "Nerdic binary watch",
+    "shortName": "Nerdic",
+    "version": "0.01",
+    "description": "Binary watch for Bangle 1 and 2.",
+    "icon": "nerdic.png",
+    "type": "clock",
+    "tags": "clock",
+    "supports": ["BANGLEJS"],
+    "readme": "README.md",
+    "storage": [
+      {"name":"nerdic.app.js","url":"nerdic.js"},
+      {"name":"nerdic.img","url":"app-icon.js","evaluate":true}
+    ]
   }
 ]
