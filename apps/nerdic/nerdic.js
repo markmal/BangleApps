@@ -6,23 +6,40 @@ g.setTheme({bg:"#000000"});
 g.setBgColor(0,0,0);
 g.clear();
 
-var hintDuration=0;
-var LEDsz=18;
+var SW=g.getWidth(), SH=g.getHeight();
+var FS=0.12*SH;
+g.setFont("Vector",FS);
+var HW=g.stringWidth("00:00:00");
+
+var BangleVer = (SW==240)?1:(SW==176)?2:0;
+
+var hoursColor = (BangleVer==1)?RED:WHITE,
+  minutesColor = (BangleVer==1)?GREEN:WHITE,
+  secondsColor = (BangleVer==1)?BLUE:WHITE;
+
+var hintDuration=-1, hintMaxduration=5;
+var LEDsz=SW/11, 
+    L=(SW - (6*LEDsz+2.5*LEDsz))/2, //Left
+    T=(SH - (3*LEDsz+LEDsz))/2; //Top
+
 function drawLED(row, col, status){
-  var y1=46+row*LEDsz*1.8, x1=16+col*LEDsz*1.4, x2=x1+LEDsz, y2=y1+LEDsz;
-  //g.clearRect(x1,y1,x2,y2);
+  var x1=L+col*LEDsz*1.5, y1=T+row*LEDsz*1.5,
+      x2=x1+LEDsz, y2=y1+LEDsz;
   if(status){
-    g.setColor(WHITE);
     g.fillEllipse(x1,y1,x2,y2);
   }else{
-    g.setColor(0.5,0.5,0.5);
     g.drawEllipse(x1,y1,x2,y2);
   }
 }
 
 function drawLEDrow(row, V){
-  var y1=46+row*LEDsz*1.8, y2=y1+LEDsz,
-      x1=16, x2=x1+5*LEDsz*1.4+LEDsz;
+  var y1=T+row*LEDsz*1.5, y2=y1+LEDsz,
+      x1=L, x2=x1+5*LEDsz*1.5+LEDsz;
+  switch(row){
+    case 0: g.setColor(hoursColor); break;
+    case 1: g.setColor(minutesColor); break;
+    case 2: g.setColor(secondsColor); break;
+  }
   g.clearRect(x1,y1,x2,y2);
   for(let i=0,m=32; i<6; i++,m>>=1) drawLED(row,i,V&m);
 }
@@ -51,18 +68,36 @@ function draw(){
     _S = S;
   }
 
-  var x=42, y=132;
-  if(hintDuration){
-    g.setFont("Vector",24);
-    g.clearRect(x,y,x+98,y+21);
+  var x=(SW-HW)/2, y=T+4.5*LEDsz;
+  if(hintDuration>0){
+    g.clearRect(x,y,x+HW,y+FS);
     g.setColor(WHITE);
+    g.setFont("Vector",FS);
     g.drawString(D.toString().substr(16,8),x,y);
     hintDuration--;
   }else{
-    g.clearRect(x,y,x+98,y+24);
+    if(hintDuration==0){
+      g.clearRect(x,y,x+HW,y+FS);
+      hintDuration--;
+    }
   }
 
 }
+
+// ---------- 
+var settings = Object.assign({
+  // default values
+  hours_color:   (BangleVer==1)?GREEN:WHITE,
+  minutes_color: (BangleVer==1)?GREEN:WHITE,
+  seconds_color: (BangleVer==1)?GREEN:WHITE,
+  hint_duration: 5
+}, require('Storage').readJSON("nerdic.json", true) || {});
+// require('Storage').writeJSON("nerdic.json", settings);
+
+hoursColor = settings.hours_color!==undefined ? settings.hours_color : hoursColor;
+minutesColor = settings.minutes_color!==undefined ? settings.minutes_color : minutesColor;
+secondsColor = settings.seconds_color!==undefined ? settings.seconds_color : secondsColor;
+hintMaxduration = settings.hint_duration!==undefined ? settings.hint_duration : 5;
 
 // Clear the screen once, at startup
 g.clear();
@@ -87,5 +122,5 @@ Bangle.drawWidgets();
 Bangle.on('tap', function(data) {
   print(data); //data.dir=="right" &&
   if(data.double)
-    hintDuration = 5;
+    hintDuration = hintMaxduration;
 });
