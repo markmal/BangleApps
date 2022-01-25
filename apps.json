@@ -5134,7 +5134,7 @@
     "readme": "README.md",
     "storage": [
       {"name":"nerdic.app.js","url":"nerdic.js"},
-      {"name":"nerdic.img","url":"nerdic-icon.js","evaluate":true}
+      {"name":"nerdic.img","url":"nerdic-icon.js","evaluate":true},
       {"name":"nerdic.settings.js","url":"nerdic-settings.js"}
     ]
   }
