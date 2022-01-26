@@ -5130,6 +5130,7 @@
     "icon": "nerdic.png",
     "type": "clock",
     "tags": "clock",
+    "allow_emulator": true,
     "supports": ["BANGLEJS","BANGLEJS2"],
     "readme": "README.md",
     "storage": [
