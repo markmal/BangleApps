@@ -1,7 +1,8 @@
-const RED="#FF0000",GREEN="#00FF00",BLUE="#0000FF",GRAY="#101010",WHITE="#FFFFFF";
-var BangleVer = (g.getWidth()==240)?1:(SW==176)?2:0;
-
 (function(back) {
+  const RED="#FF0000",GREEN="#00FF00",BLUE="#0000FF",GRAY="#101010",WHITE="#FFFFFF";
+  var SW=g.getWidth();
+  var BangleVer = (SW==240)?1:(SW==176)?2:0;
+
   var FILE = "nerdic.json";
   // Load settings
   var settings = Object.assign({
@@ -75,4 +76,4 @@ var BangleVer = (g.getWidth()==240)?1:(SW==176)?2:0;
   };
  // Show the menu
   E.showMenu(nerdicMenu);
-})(load)
+})
