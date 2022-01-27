@@ -1,3 +1,4 @@
+//M= //uncomment for tests
 (function(back) {
   const RED="#FF0000",GREEN="#00FF00",BLUE="#0000FF",GRAY="#101010",WHITE="#FFFFFF";
   var SW=g.getWidth();
@@ -9,8 +10,9 @@
     hours_color:   (BangleVer==1)?GREEN:WHITE,
     minutes_color: (BangleVer==1)?GREEN:WHITE,
     seconds_color: (BangleVer==1)?GREEN:WHITE,
-    hint_duration: 5
-  }, require('Storage').readJSON(FILE, true) || {});
+    hint_duration: 5,
+    show_seconds: 2 // 0:never, 1:when unlocked, 2:always
+ }, require('Storage').readJSON(FILE, true) || {});
 
   function writeSettings() {
     require('Storage').writeJSON(FILE, settings);
@@ -72,8 +74,23 @@
         settings.hint_duration = v;
         writeSettings();
       }
+    },
+
+    "Show seconds" : {
+    value : 2|settings.show_seconds,
+    min:0,max:2,step:1,
+    onchange : v => { settings.show_seconds = v; },
+    format : function (v) { 
+      switch(v){
+        case 0: return "Never";
+        case 1: return "Unlocked";
+        case 2: return "Always";
+      }
     }
+  },
+
   };
  // Show the menu
   E.showMenu(nerdicMenu);
-})
+});
+//M(load); //uncomment for tests

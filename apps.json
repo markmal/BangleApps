@@ -5125,7 +5125,7 @@
     "id": "nerdic",
     "name": "Nerdic binary watch",
     "shortName": "Nerdic",
-    "version": "0.01",
+    "version": "0.02",
     "description": "Binary watch for Bangle JS 1 and 2.",
     "icon": "nerdic.png",
     "type": "clock",
