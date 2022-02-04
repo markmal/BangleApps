@@ -1,6 +1,7 @@
 // Nerdic binary watch
-const RED="#FF0000",GREEN="#00FF00",BLUE="#0000FF",
-      GRAY="#101010",WHITE="#FFFFFF",BLACK="#000000";
+
+const BLACK="#000", RED="#f00",GREEN="#0f0",BLUE="#00f",
+      YELLOW="#ff0", MAGENTA="#f0f", CYAN="#0ff", WHITE="#fff";
 
 g.reset();
 g.setTheme({bg:"#000000"});
