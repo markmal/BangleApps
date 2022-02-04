@@ -83,7 +83,8 @@ function draw(D){
     g.fillRect(x-2,y-2,x+HW,y+FS);
     g.setColor(BLACK);
     g.setFont("Vector",FS);
-    g.drawString(D.toString().substr(16,8),x,y);
+    g.setFontAlign(0,0);
+    g.drawString(D.toString().substr(15,8),SW/2,y+FS/2);
     hintDuration--;
   }else{
     if(hintDuration==0){
