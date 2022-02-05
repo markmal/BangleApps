@@ -1,4 +1,4 @@
-require("http://localhost/mark/BangleApps/modules/E_showMenu_Q3_mm.js");
+//require("http://localhost/mark/BangleApps/modules/E_showMenu_Q3_mm.js");
 
 //M= //uncomment for tests
 (function(back) {
